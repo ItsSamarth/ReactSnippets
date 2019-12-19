@@ -28,6 +28,21 @@ export default class FileUploader extends Component {
     return { url: `http://localhost:8080/api/file/upload/${data.meta.id}` };
   };
 
+  uploadUsingAxios = (fileChunk, id, chunkNumber, totalFileSize) => {
+    let options = {
+      url: `http://localhost:8080/api/file/upload/${id}`,
+      data: fileChunk,
+      method: "post",
+      headers: {
+        "x-fileHash": id,
+        "x-chunkNumber": chunkNumber,
+        "x-totalFileSize": totalFileSize
+      }
+    };
+
+    return AXIOS(options);
+  };
+
   removeFile = meta => {
     let options = {
       url: `/file/upload/${meta.id}-${meta.name}`,
@@ -37,7 +52,12 @@ export default class FileUploader extends Component {
     return AXIOS(options);
   };
 
-  handleChangeStatus = ({ meta, file }, status) => {
+  handleChangeStatus = async ({ meta, file }, status) => {
+    //creating md5 hash of the file
+    var md = md5(file);
+
+    console.log("MD5 hash of the file", md);
+
     // console.log("handle change status", meta);
 
     // console.log("meta base64 file", readAsDataURL(meta.previewUrl));
@@ -80,16 +100,16 @@ export default class FileUploader extends Component {
       //   }
       // }
 
+      // creating md5 hash of a file
+
       //New way to create chunks
       let filePart = "";
-      let start = 0;
       let fileSize = file.size;
 
       console.log("Now file size is", file.size);
       let sentByte = 0;
+      let chunkNumber = 0;
       while (sentByte < fileSize) {
-        start = sentByte;
-
         if (fileSize - sentByte >= 1000000) {
           filePart = file.slice(sentByte, sentByte + 1000000);
           sentByte += 1000000;
@@ -99,14 +119,10 @@ export default class FileUploader extends Component {
           filePart = file.slice(sentByte, fileSize);
           sentByte += fileSize - sentByte;
         }
-        console.log(
-          "file part we are sending is ",
-          start,
-          "sentByte = ",
-          sentByte,
-          "File part remians",
-          filePart
-        );
+
+        chunkNumber++;
+        // this.getUploadParams(filePart, md);
+        await this.uploadUsingAxios(filePart, md, chunkNumber, fileSize);
       }
       // });
       //start the reading process.
