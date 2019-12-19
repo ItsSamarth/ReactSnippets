@@ -28,15 +28,30 @@ export default class FileUploader extends Component {
     return { url: `http://localhost:8080/api/file/upload/${data.meta.id}` };
   };
 
-  uploadUsingAxios = (fileChunk, id, chunkNumber, totalFileSize) => {
+  uploadUsingAxios = (fileChunk, id, chunkNumber, totalFileSize, meta) => {
+    console.log(
+      "UPload using axios",
+      fileChunk,
+      id,
+      chunkNumber,
+      totalFileSize
+    );
+
+    let formData = new FormData();
+    formData.append("fileHash", id);
+    formData.append("chunkNumber", chunkNumber);
+    formData.append("fileChunk", fileChunk);
+    formData.append("totalFileSize", totalFileSize);
+    formData.append("fileName", meta.name);
     let options = {
-      url: `http://localhost:8080/api/file/upload/${id}`,
-      data: fileChunk,
+      url: `http://localhost:8080/api/file/chunk/upload`,
+      data: formData,
       method: "post",
       headers: {
         "x-fileHash": id,
         "x-chunkNumber": chunkNumber,
-        "x-totalFileSize": totalFileSize
+        "x-totalFileSize": totalFileSize,
+        "x-fileName": meta.name
       }
     };
 
@@ -54,53 +69,10 @@ export default class FileUploader extends Component {
 
   handleChangeStatus = async ({ meta, file }, status) => {
     //creating md5 hash of the file
-    var md = md5(file);
-
-    console.log("MD5 hash of the file", md);
-
-    // console.log("handle change status", meta);
-
-    // console.log("meta base64 file", readAsDataURL(meta.previewUrl));
-    // var myBlob = new Blob(["Hello"], { type: "text/plain" });
 
     if (status === "getting_upload_params") {
-      // var myReader = new FileReader();
-      // var view;
-      // var ele;
-
-      //handler executed once reading(blob content referenced to a variable) from blob is finished.
-      // myReader.addEventListener("loadend", function(e) {
-      //   let ele = e.srcElement.result;
-
-      // console.log("ele", ele);
-      // let view = new Uint8Array(ele);
-      // var md = md5(view);
-      // meta.id = md;
-      // var md5 = CryptoJS.MD5(view);
-      // console.log(" ------- > ", md5(view));
-      //create chunking of 1mb each
-      // let remainingBytes = view.length;
-      // let sentBytes = 0;
-      // while (sentBytes < view.length) {
-      //   console.log("Comaprision", sentBytes, remainingBytes, view.length);
-      //   if (remainingBytes >= 40000000) {
-      //     console.log(
-      //       "sliced 1 mb array",
-      //       view.slice(sentBytes, sentBytes + 40000000)
-      //     );
-      //     sentBytes += 40000000;
-      //     remainingBytes -= 40000000;
-      //   } else {
-      //     console.log(
-      //       "sliced remaining bytes array",
-      //       view.slice(sentBytes, sentBytes + remainingBytes)
-      //     );
-      //     sentBytes += remainingBytes;
-      //     remainingBytes = 0;
-      //   }
-      // }
-
-      // creating md5 hash of a file
+      var md = md5(file);
+      console.log("MD5 hash of the file", md);
 
       //New way to create chunks
       let filePart = "";
@@ -121,8 +93,10 @@ export default class FileUploader extends Component {
         }
 
         chunkNumber++;
+
+        console.log("Meta before uploading the file", meta);
         // this.getUploadParams(filePart, md);
-        await this.uploadUsingAxios(filePart, md, chunkNumber, fileSize);
+        await this.uploadUsingAxios(filePart, md, chunkNumber, fileSize, meta);
       }
       // });
       //start the reading process.
@@ -174,7 +148,7 @@ export default class FileUploader extends Component {
     return (
       <div>
         <Dropzone
-          getUploadParams={this.getUploadParams}
+          getUploadParams={this.uploadUsingAxios}
           onChangeStatus={this.handleChangeStatus}
           onSubmit={this.handleSubmit}
           accept="image/*,video/*"
