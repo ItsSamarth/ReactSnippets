@@ -8,12 +8,6 @@ const path = require("path");
 //Multer config
 const storage = multer.diskStorage({
   destination: function(req, file, cb) {
-    console.log("Destination multer");
-    console.log("re file", req.file);
-    console.log("file", file);
-    console.log("file headers", req.headers);
-    // let { id } = req.params;
-
     let fileId = req.headers["x-fileid"];
     let fileName = req.headers["x-filename"];
     let extension = path.extname(fileName);
@@ -24,8 +18,6 @@ const storage = multer.diskStorage({
 
     // Create the temporary file name for the chunks
     let tempFileName = baseFileName + "." + chunkNumber + extension + ".tmp";
-
-    console.log(tempFileName);
 
     // Create the temporary directory to store the file chunk
     // the temporary directory will be based on the file name
@@ -79,6 +71,26 @@ const upload = multer({
   // fileFilter: fileFilter
 });
 
+//READING FILES
+
+function readFiles(dirname, onFileContent, onError) {
+  fs.readdir(dirname, function(err, filenames) {
+    if (err) {
+      onError(err);
+      return;
+    }
+    filenames.forEach(function(filename) {
+      fs.readFile(dirname + filename, "utf-8", function(err, content) {
+        if (err) {
+          onError(err);
+          return;
+        }
+        onFileContent(filename, content);
+      });
+    });
+  });
+}
+
 //get all images
 router.get("/image", (req, res) => {
   res.status(200).json({
@@ -114,6 +126,7 @@ router.post(
 
 //uploding chunks
 router.post("/chunk/upload", upload.array("fileChunk", 12), (req, res) => {
+  console.log("Console main function-=-=-=-=-=--=");
   //content type check
   if (!req.is("multipart/form-data")) {
     return res.status(415).send("Unsupported media type");
@@ -128,11 +141,52 @@ router.post("/chunk/upload", upload.array("fileChunk", 12), (req, res) => {
 
   console.log("print request body");
   console.log("Request body", req.body);
-  console.log("Request body", req.file);
+  console.log("Request file", req.file);
 
-  // CREATING TEMP FOR CHUNKS
+  // Validating chunks
 
   return res.status(200).json("ok");
+});
+
+//concat chunks
+router.post("/chunk/concat", (req, res) => {
+  try {
+    console.log("Request headers", req.body);
+    let { id } = req.body;
+    //combining chunks
+    var data = {};
+
+    //directory
+    let tempDir = "../../../temp/" + id;
+    tempDir = path.join(__dirname + tempDir);
+
+    console.log(tempDir);
+    // read files
+    readFiles(
+      `${tempDir}/`,
+      function(filename, content) {
+        data[filename] = content;
+        console.log("content", content, filename);
+      },
+      function(err) {
+        console.log("errrrrrrrrrrr ");
+        throw err;
+      }
+    );
+
+    console.log("combined chunks", data);
+    //upload file dir
+    let uploadDir = "../../../uploads/" + id;
+    uploadDir = path.join(__dirname + uploadDir);
+    fs.writeFile(uploadDir);
+
+    return res.status(200).json({
+      message: "done"
+    });
+  } catch (err) {
+    console.log("Getting error");
+    return res.status(500).json(err);
+  }
 });
 
 router.delete("/upload/:id", (req, res, err) => {

@@ -53,6 +53,16 @@ export default class FileUploader extends Component {
     return AXIOS(options);
   };
 
+  concatUsingAxios = meta => {
+    console.log("concatUsingAxios", meta);
+    let options = {
+      url: `http://localhost:8080/api/file/chunk/concat`,
+      method: "post",
+      data: meta
+    };
+    return AXIOS(options);
+  };
+
   removeFile = meta => {
     let options = {
       url: `/file/upload/${meta.id}-${meta.name}`,
@@ -87,18 +97,25 @@ export default class FileUploader extends Component {
 
         chunkNumber++;
 
-        await this.uploadUsingAxios(filePart, chunkNumber, fileSize, meta);
+        let { data } = await this.uploadUsingAxios(
+          filePart,
+          chunkNumber,
+          fileSize,
+          meta
+        );
+        console.log("Server Response", data);
       }
+
+      //concat the chunks
+      meta["totalChunks"] = chunkNumber;
+      let { data } = this.concatUsingAxios(meta);
+      console.log("response after concat", data);
+
       // });
       //start the reading process.
       // myReader.readAsArrayBuffer(file);
     }
     // console.log("My reader as array buffer", myReader[0]);
-
-    if (status === "preparing") {
-      // meta.id = uniqueId;
-      console.log("status", meta);
-    }
 
     if (status === "removed") {
       this.removeFile(meta);
