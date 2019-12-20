@@ -94,8 +94,12 @@ export default class FileUploader extends Component {
 
         chunkNumber++;
 
-        console.log("Meta before uploading the file", meta);
         // this.getUploadParams(filePart, md);
+        // let ab = new ArrayBuffer(filePart);
+        // let view = new Uint8Array(ab);
+        // console.log("The view generated", view);
+        // let mdnew = md5(view);
+        // console.log("new md hash", mdnew);
         await this.uploadUsingAxios(filePart, md, chunkNumber, fileSize, meta);
       }
       // });
