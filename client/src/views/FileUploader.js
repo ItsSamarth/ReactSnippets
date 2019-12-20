@@ -28,17 +28,11 @@ export default class FileUploader extends Component {
     return { url: `http://localhost:8080/api/file/upload/${data.meta.id}` };
   };
 
-  uploadUsingAxios = (fileChunk, id, chunkNumber, totalFileSize, meta) => {
-    console.log(
-      "UPload using axios",
-      fileChunk,
-      id,
-      chunkNumber,
-      totalFileSize
-    );
+  uploadUsingAxios = (fileChunk, chunkNumber, totalFileSize, meta) => {
+    console.log("UPload using axios", fileChunk, chunkNumber, totalFileSize);
 
     let formData = new FormData();
-    formData.append("fileHash", id);
+    formData.append("fileId", meta.id);
     formData.append("chunkNumber", chunkNumber);
     formData.append("fileChunk", fileChunk);
     formData.append("totalFileSize", totalFileSize);
@@ -48,11 +42,11 @@ export default class FileUploader extends Component {
       data: formData,
       method: "post",
       headers: {
-        "x-fileHash": id,
+        "x-fileHash": meta.id,
         "x-chunkNumber": chunkNumber,
         "x-totalFileSize": totalFileSize,
         "x-fileName": meta.name,
-        "x-fileId": meta.id
+        "x-fileid": meta.id
       }
     };
 
@@ -80,7 +74,6 @@ export default class FileUploader extends Component {
       let filePart = "";
       let fileSize = file.size;
 
-      console.log("Now file size is", file.size);
       let sentByte = 0;
       let chunkNumber = 0;
       while (sentByte < fileSize) {
@@ -94,19 +87,7 @@ export default class FileUploader extends Component {
 
         chunkNumber++;
 
-        // this.getUploadParams(filePart, md);
-        // let ab = new ArrayBuffer(filePart);
-
-        var arrayBuffer = null;
-
-        /* Use the await keyword to wait for the Promise to resolve */
-        arrayBuffer = await new Response(filePart).arrayBuffer();
-
-        let view = new Uint8Array(arrayBuffer);
-        console.log("The view generated", arrayBuffer);
-        let md = md5(view);
-        console.log("new md hash", md);
-        await this.uploadUsingAxios(filePart, md, chunkNumber, fileSize, meta);
+        await this.uploadUsingAxios(filePart, chunkNumber, fileSize, meta);
       }
       // });
       //start the reading process.

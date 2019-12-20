@@ -14,18 +14,10 @@ const storage = multer.diskStorage({
     console.log("file headers", req.headers);
     // let { id } = req.params;
 
-    let fileHash = req.headers["x-filehash"];
-    let fileId = req.headers["x-fileId"];
-    // let fileName = req.headers["x-chunknumber"] + ".tmp";
-    // console.log(req.headers);
-    // console.log("fileHash", fileHash, fileName);
-    // get the extensions from the file namme
+    let fileId = req.headers["x-fileid"];
     let fileName = req.headers["x-filename"];
     let extension = path.extname(fileName);
     let chunkNumber = req.headers["x-chunknumber"];
-
-    // console.log("chunnk number", chunkNumber);
-    // console.log(typeof chunkNumber);
 
     // Get the base file name
     let baseFileName = path.basename(fileName, extension);
@@ -38,15 +30,10 @@ const storage = multer.diskStorage({
     // Create the temporary directory to store the file chunk
     // the temporary directory will be based on the file name
 
-    let tempDir = "../../../temp/" + fileHash;
+    let tempDir = "../../../temp/" + fileId;
     tempDir = path.join(__dirname + tempDir);
     // The path to save the file chunk
     let localFilePath = tempDir + tempFileName;
-
-    // if (fs.ensureDirSync(tempDir)) {
-    //   console.log("Created Directory " + tempDir);
-    // }
-
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir);
     }
