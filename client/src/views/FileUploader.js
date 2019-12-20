@@ -51,7 +51,8 @@ export default class FileUploader extends Component {
         "x-fileHash": id,
         "x-chunkNumber": chunkNumber,
         "x-totalFileSize": totalFileSize,
-        "x-fileName": meta.name
+        "x-fileName": meta.name,
+        "x-fileId": meta.id
       }
     };
 
@@ -68,12 +69,13 @@ export default class FileUploader extends Component {
   };
 
   handleChangeStatus = async ({ meta, file }, status) => {
+    if (status === "preparing") {
+      let uniqueId = uuidv4();
+      meta.id = uniqueId;
+    }
+
     //creating md5 hash of the file
-
     if (status === "getting_upload_params") {
-      var md = md5(file);
-      console.log("MD5 hash of the file", md);
-
       //New way to create chunks
       let filePart = "";
       let fileSize = file.size;
@@ -86,8 +88,6 @@ export default class FileUploader extends Component {
           filePart = file.slice(sentByte, sentByte + 1000000);
           sentByte += 1000000;
         } else {
-          console.log("Last part of file slicing", fileSize - sentByte);
-          console.log("we are sending", sentByte, " ", fileSize);
           filePart = file.slice(sentByte, fileSize);
           sentByte += fileSize - sentByte;
         }
@@ -96,10 +96,16 @@ export default class FileUploader extends Component {
 
         // this.getUploadParams(filePart, md);
         // let ab = new ArrayBuffer(filePart);
-        // let view = new Uint8Array(ab);
-        // console.log("The view generated", view);
-        // let mdnew = md5(view);
-        // console.log("new md hash", mdnew);
+
+        var arrayBuffer = null;
+
+        /* Use the await keyword to wait for the Promise to resolve */
+        arrayBuffer = await new Response(filePart).arrayBuffer();
+
+        let view = new Uint8Array(arrayBuffer);
+        console.log("The view generated", arrayBuffer);
+        let md = md5(view);
+        console.log("new md hash", md);
         await this.uploadUsingAxios(filePart, md, chunkNumber, fileSize, meta);
       }
       // });

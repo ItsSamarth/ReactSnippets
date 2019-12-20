@@ -15,6 +15,7 @@ const storage = multer.diskStorage({
     // let { id } = req.params;
 
     let fileHash = req.headers["x-filehash"];
+    let fileId = req.headers["x-fileId"];
     // let fileName = req.headers["x-chunknumber"] + ".tmp";
     // console.log(req.headers);
     // console.log("fileHash", fileHash, fileName);
