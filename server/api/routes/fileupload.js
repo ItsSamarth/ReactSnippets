@@ -4,6 +4,7 @@ const multer = require("multer");
 const fs = require("fs");
 const scanFile = require("../utils/fileScanner");
 const path = require("path");
+const spawn = require("child_process").spawn;
 
 //Multer config
 const storage = multer.diskStorage({
@@ -148,11 +149,72 @@ router.post("/chunk/upload", upload.array("fileChunk", 12), (req, res) => {
   return res.status(200).json("ok");
 });
 
+//spawn the bash command to concat files
+function concatChunkUsingSpawn(tempDir, uploadDir, name, totalChunks) {
+  let command = "cat";
+  let args = [];
+
+  let fileName = name;
+  let extension = path.extname(fileName);
+  // Get the base file name
+  let baseFileName = path.basename(fileName, extension);
+  // Create the temporary file name for the chunks
+  while (totalChunks > 0) {
+    let tempName = baseFileName + "." + totalChunks + extension + ".tmp";
+    // args.push(`"${tempName}"`);
+    args.push(tempName);
+    totalChunks -= 1;
+  }
+  args.push(" > combined.jpg");
+
+  console.log(args);
+  console.log("working directory", tempDir);
+
+  let options = {
+    cwd: tempDir,
+    shell: true
+  };
+
+  var newFile = "";
+
+  try {
+    var cmd = spawn(command, args, options);
+  } catch (err) {
+    console.log("Error in spawn", err);
+  }
+
+  // cmd.stdout.on("data", chunk => {
+  //   console.log(chunk);
+  // });
+
+  // cmd.stderr.pipe(dest);
+
+  cmd.stdout.on("data", stdout => {
+    console.log("#3. spawn");
+    console.log(stdout);
+    // newFile = newFile + stdout.toString();
+    // console.log(stdout.toString());
+  });
+
+  cmd.stderr.on("data", stderr => {
+    console.log("stderr in spawn");
+    console.log(stderr.toString());
+  });
+
+  cmd.on("close", code => {
+    console.log(`Child process exited with code ${code}`);
+  });
+
+  fs.writeFile("test.jpg", buffer, "binary", function(err) {
+    console.log("Error", err);
+  });
+}
+
 //concat chunks
 router.post("/chunk/concat", (req, res) => {
   try {
     console.log("Request headers", req.body);
-    let { id } = req.body;
+    let { id, name, totalChunks } = req.body;
     //combining chunks
     var data = {};
 
@@ -160,25 +222,15 @@ router.post("/chunk/concat", (req, res) => {
     let tempDir = "../../../temp/" + id;
     tempDir = path.join(__dirname + tempDir);
 
-    console.log(tempDir);
-    // read files
-    readFiles(
-      `${tempDir}/`,
-      function(filename, content) {
-        data[filename] = content;
-        console.log("content", content, filename);
-      },
-      function(err) {
-        console.log("errrrrrrrrrrr ");
-        throw err;
-      }
-    );
-
-    console.log("combined chunks", data);
-    //upload file dir
+    //upload dir
     let uploadDir = "../../../uploads/" + id;
     uploadDir = path.join(__dirname + uploadDir);
-    fs.writeFile(uploadDir);
+
+    let result = concatChunkUsingSpawn(tempDir, uploadDir, name, totalChunks);
+    //upload file dir
+    // let uploadDir = "../../../uploads/" + id;
+    // uploadDir = path.join(__dirname + uploadDir);
+    // fs.writeFile(uploadDir);
 
     return res.status(200).json({
       message: "done"
