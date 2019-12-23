@@ -103,6 +103,8 @@ export default class FileUploader extends Component {
           fileSize,
           meta
         );
+        meta.status = "uploading";
+        meta.progress += 10;
         console.log("Server Response", data);
       }
 

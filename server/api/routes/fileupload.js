@@ -150,7 +150,7 @@ router.post("/chunk/upload", upload.array("fileChunk", 12), (req, res) => {
 });
 
 //spawn the bash command to concat files
-function concatChunkUsingSpawn(tempDir, uploadDir, name, totalChunks) {
+function concatChunkUsingSpawn(tempDir, uploadDir, name, totalChunks, id) {
   let command = "cat";
   let args = [];
 
@@ -159,13 +159,15 @@ function concatChunkUsingSpawn(tempDir, uploadDir, name, totalChunks) {
   // Get the base file name
   let baseFileName = path.basename(fileName, extension);
   // Create the temporary file name for the chunks
-  while (totalChunks > 0) {
-    let tempName = baseFileName + "." + totalChunks + extension + ".tmp";
+  let i = 1;
+  while (i <= totalChunks) {
+    let tempName = baseFileName + "." + i + extension + ".tmp";
     // args.push(`"${tempName}"`);
     args.push(tempName);
-    totalChunks -= 1;
+    i++;
   }
-  args.push(" > combined.jpg");
+  console.log("FIle name with extension", `> ${id}${extension}`);
+  args.push(`> ${id}${extension}`);
 
   console.log(args);
   console.log("working directory", tempDir);
@@ -226,7 +228,13 @@ router.post("/chunk/concat", (req, res) => {
     let uploadDir = "../../../uploads/" + id;
     uploadDir = path.join(__dirname + uploadDir);
 
-    let result = concatChunkUsingSpawn(tempDir, uploadDir, name, totalChunks);
+    let result = concatChunkUsingSpawn(
+      tempDir,
+      uploadDir,
+      name,
+      totalChunks,
+      id
+    );
     //upload file dir
     // let uploadDir = "../../../uploads/" + id;
     // uploadDir = path.join(__dirname + uploadDir);
