@@ -107,14 +107,6 @@ export default class FileUploader extends Component {
         calls.push(
           this.uploadUsingAxios(filePart, chunkNumber, fileSize, meta)
         );
-        // let { data } = await this.uploadUsingAxios(
-        //   filePart,
-        //   chunkNumber,
-        //   fileSize,
-        //   meta
-        // );
-        // meta.status = "uploading";
-        // meta.progress += 10;
       }
 
       let that = this;
@@ -134,20 +126,20 @@ export default class FileUploader extends Component {
 
       // Computing failed responses
       let failedRes = [];
+      let resRetry = [];
       for (let j = 0; j <= data.length; j++) {
         if (status !== 200) {
           failedRes.push(calls[j]);
         }
+        data = await Promise.all(failedRes);
+        failedRes = [];
+        if (data.length <= 0) {
+          j = 0;
+        }
       }
 
       console.log("failed chunks");
-
-      // });
-      //start the reading process.
-      // myReader.readAsArrayBuffer(file);
     }
-    // console.log("My reader as array buffer", myReader[0]);
-
     if (status === "removed") {
       this.removeFile(meta);
     }
