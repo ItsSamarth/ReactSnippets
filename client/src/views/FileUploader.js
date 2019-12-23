@@ -28,6 +28,41 @@ export default class FileUploader extends Component {
     return { url: `http://localhost:8080/api/file/upload/${data.meta.id}` };
   };
 
+  uploadUsingAxios = (fileChunk, chunkNumber, totalFileSize, meta) => {
+    console.log("UPload using axios", fileChunk, chunkNumber, totalFileSize);
+
+    let formData = new FormData();
+    formData.append("fileId", meta.id);
+    formData.append("chunkNumber", chunkNumber);
+    formData.append("fileChunk", fileChunk);
+    formData.append("totalFileSize", totalFileSize);
+    formData.append("fileName", meta.name);
+    let options = {
+      url: `http://localhost:8080/api/file/chunk/upload`,
+      data: formData,
+      method: "post",
+      headers: {
+        "x-fileHash": meta.id,
+        "x-chunkNumber": chunkNumber,
+        "x-totalFileSize": totalFileSize,
+        "x-fileName": meta.name,
+        "x-fileid": meta.id
+      }
+    };
+
+    return AXIOS(options);
+  };
+
+  concatUsingAxios = meta => {
+    console.log("concatUsingAxios", meta);
+    let options = {
+      url: `http://localhost:8080/api/file/chunk/concat`,
+      method: "post",
+      data: meta
+    };
+    return AXIOS(options);
+  };
+
   removeFile = meta => {
     let options = {
       url: `/file/upload/${meta.id}-${meta.name}`,
@@ -37,87 +72,52 @@ export default class FileUploader extends Component {
     return AXIOS(options);
   };
 
-  handleChangeStatus = ({ meta, file }, status) => {
-    // console.log("handle change status", meta);
+  handleChangeStatus = async ({ meta, file }, status) => {
+    if (status === "preparing") {
+      let uniqueId = uuidv4();
+      meta.id = uniqueId;
+    }
 
-    // console.log("meta base64 file", readAsDataURL(meta.previewUrl));
-    // var myBlob = new Blob(["Hello"], { type: "text/plain" });
-
+    //creating md5 hash of the file
     if (status === "getting_upload_params") {
-      // var myReader = new FileReader();
-      // var view;
-      // var ele;
-
-      //handler executed once reading(blob content referenced to a variable) from blob is finished.
-      // myReader.addEventListener("loadend", function(e) {
-      //   let ele = e.srcElement.result;
-
-      // console.log("ele", ele);
-      // let view = new Uint8Array(ele);
-      // var md = md5(view);
-      // meta.id = md;
-      // var md5 = CryptoJS.MD5(view);
-      // console.log(" ------- > ", md5(view));
-      //create chunking of 1mb each
-      // let remainingBytes = view.length;
-      // let sentBytes = 0;
-      // while (sentBytes < view.length) {
-      //   console.log("Comaprision", sentBytes, remainingBytes, view.length);
-      //   if (remainingBytes >= 40000000) {
-      //     console.log(
-      //       "sliced 1 mb array",
-      //       view.slice(sentBytes, sentBytes + 40000000)
-      //     );
-      //     sentBytes += 40000000;
-      //     remainingBytes -= 40000000;
-      //   } else {
-      //     console.log(
-      //       "sliced remaining bytes array",
-      //       view.slice(sentBytes, sentBytes + remainingBytes)
-      //     );
-      //     sentBytes += remainingBytes;
-      //     remainingBytes = 0;
-      //   }
-      // }
-
       //New way to create chunks
       let filePart = "";
-      let start = 0;
       let fileSize = file.size;
 
-      console.log("Now file size is", file.size);
       let sentByte = 0;
+      let chunkNumber = 0;
       while (sentByte < fileSize) {
-        start = sentByte;
-
         if (fileSize - sentByte >= 1000000) {
           filePart = file.slice(sentByte, sentByte + 1000000);
           sentByte += 1000000;
         } else {
-          console.log("Last part of file slicing", fileSize - sentByte);
-          console.log("we are sending", sentByte, " ", fileSize);
           filePart = file.slice(sentByte, fileSize);
           sentByte += fileSize - sentByte;
         }
-        console.log(
-          "file part we are sending is ",
-          start,
-          "sentByte = ",
-          sentByte,
-          "File part remians",
-          filePart
+
+        chunkNumber++;
+
+        let { data } = await this.uploadUsingAxios(
+          filePart,
+          chunkNumber,
+          fileSize,
+          meta
         );
+        meta.status = "uploading";
+        meta.progress += 10;
+        console.log("Server Response", data);
       }
+
+      //concat the chunks
+      meta["totalChunks"] = chunkNumber;
+      let { data } = this.concatUsingAxios(meta);
+      console.log("response after concat", data);
+
       // });
       //start the reading process.
       // myReader.readAsArrayBuffer(file);
     }
     // console.log("My reader as array buffer", myReader[0]);
-
-    if (status === "preparing") {
-      // meta.id = uniqueId;
-      console.log("status", meta);
-    }
 
     if (status === "removed") {
       this.removeFile(meta);
@@ -158,7 +158,7 @@ export default class FileUploader extends Component {
     return (
       <div>
         <Dropzone
-          getUploadParams={this.getUploadParams}
+          getUploadParams={this.uploadUsingAxios}
           onChangeStatus={this.handleChangeStatus}
           onSubmit={this.handleSubmit}
           accept="image/*,video/*"

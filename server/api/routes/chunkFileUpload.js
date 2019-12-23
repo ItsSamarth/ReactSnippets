@@ -8,7 +8,7 @@ const crypto = require("crypto");
 router.post("/upload", (req, res) => {
   if (req.method === "POST") {
     //content type check
-    if (!request.is("multipart/form-data")) {
+    if (!req.is("multipart/form-data")) {
       return res.status(415).send("Unsupported media type");
     }
 
