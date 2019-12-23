@@ -162,8 +162,7 @@ function concatChunkUsingSpawn(tempDir, uploadDir, name, totalChunks, id) {
   let i = 1;
   while (i <= totalChunks) {
     let tempName = baseFileName + "." + i + extension + ".tmp";
-    // args.push(`"${tempName}"`);
-    args.push(tempName);
+    args.push(`"${tempName}"`);
     i++;
   }
   console.log("FIle name with extension", `> ${id}${extension}`);
@@ -207,9 +206,9 @@ function concatChunkUsingSpawn(tempDir, uploadDir, name, totalChunks, id) {
     console.log(`Child process exited with code ${code}`);
   });
 
-  fs.writeFile("test.jpg", buffer, "binary", function(err) {
-    console.log("Error", err);
-  });
+  // fs.writeFile("test.jpg", buffer, "binary", function(err) {
+  //   console.log("Error", err);
+  // });
 }
 
 //concat chunks

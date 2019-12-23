@@ -82,14 +82,21 @@ export default class FileUploader extends Component {
     if (status === "getting_upload_params") {
       //New way to create chunks
       let filePart = "";
+      let calls = [];
       let fileSize = file.size;
+
+      if (fileSize > 1000000) {
+        var chunkSize = 1000000;
+      } else {
+        var chunkSize = 100000;
+      }
 
       let sentByte = 0;
       let chunkNumber = 0;
       while (sentByte < fileSize) {
-        if (fileSize - sentByte >= 1000000) {
-          filePart = file.slice(sentByte, sentByte + 1000000);
-          sentByte += 1000000;
+        if (fileSize - sentByte >= chunkSize) {
+          filePart = file.slice(sentByte, sentByte + chunkSize);
+          sentByte += chunkSize;
         } else {
           filePart = file.slice(sentByte, fileSize);
           sentByte += fileSize - sentByte;
@@ -97,21 +104,43 @@ export default class FileUploader extends Component {
 
         chunkNumber++;
 
-        let { data } = await this.uploadUsingAxios(
-          filePart,
-          chunkNumber,
-          fileSize,
-          meta
+        calls.push(
+          this.uploadUsingAxios(filePart, chunkNumber, fileSize, meta)
         );
-        meta.status = "uploading";
-        meta.progress += 10;
-        console.log("Server Response", data);
+        // let { data } = await this.uploadUsingAxios(
+        //   filePart,
+        //   chunkNumber,
+        //   fileSize,
+        //   meta
+        // );
+        // meta.status = "uploading";
+        // meta.progress += 10;
       }
 
-      //concat the chunks
-      meta["totalChunks"] = chunkNumber;
-      let { data } = this.concatUsingAxios(meta);
-      console.log("response after concat", data);
+      let that = this;
+      // Promise.all(calls)
+      //   .then(function(values) {
+      //     console.log(values);
+      //     // //concat the chunks
+      //     meta["totalChunks"] = chunkNumber;
+      //     let { data } = that.concatUsingAxios(meta);
+      //   })
+      //   .catch(err => {
+      //     console.error("-=-=-=-=-=" + err);
+      //   });
+
+      let data = await Promise.all(calls);
+      console.log(data);
+
+      // Computing failed responses
+      let failedRes = [];
+      for (let j = 0; j <= data.length; j++) {
+        if (status !== 200) {
+          failedRes.push(calls[j]);
+        }
+      }
+
+      console.log("failed chunks");
 
       // });
       //start the reading process.
