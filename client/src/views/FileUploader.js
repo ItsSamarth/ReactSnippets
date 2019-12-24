@@ -9,7 +9,14 @@ export default class FileUploader extends Component {
     super(props);
     this.state = {
       uploadingImages: {},
-      dataUnsaved: true
+      dataUnsaved: true,
+      activeChunkQueue: [],
+      pendingChunkQueue: [],
+      failedChunkQueue: [],
+      pendingFileQueue: [],
+      activeFileQueue: [],
+      failedFileQueue: [],
+      uploadingStart: false
     };
   }
 
@@ -72,78 +79,128 @@ export default class FileUploader extends Component {
     return AXIOS(options);
   };
 
-  handleChangeStatus = async ({ meta, file }, status) => {
-    if (status === "preparing") {
+  getFileChunk = file => {};
+
+  sendFiles = () => {
+    console.log("Send files logs");
+    console.log(this.state.activeFileQueue);
+    let { pendingFileQueue } = this.state;
+
+    while (pendingFileQueue.length > 0) {
+      //check for the new file queue
+      pendingFileQueue = this.state.pendingFileQueue;
+
+      // Get pending chunks and active file queue
+      let { pendingChunkQueue, activeFileQueue } = this.state;
+
+      while (pendingChunkQueue.length < 10 && pendingFileQueue.length != 0) {
+        //pop the file and push it to the active file queue
+        let newFile = pendingFileQueue.slice(0, 1);
+
+        // get the chunks of the file
+        let chunks = this.getFileChunk(newFile);
+
+        // update chunks in the queue
+        this.setState({
+          pendingChunkQueue: pendingChunkQueue.concat(chunks)
+        });
+      }
+    }
+  };
+
+  handleChangeStatus = async file => {
+    console.log(file);
+    console.log(file.meta.status);
+    if (file.meta.status === "preparing") {
       let uniqueId = uuidv4();
-      meta.id = uniqueId;
+      file.meta.id = uniqueId;
+
+      //
+      let { pendingFileQueue, uploadingStart } = this.state;
+      pendingFileQueue.push(file);
+      this.setState({
+        pendingFileQueue
+      });
+
+      console.log("New state is", this.state);
+
+      if (uploadingStart) {
+        this.sendFiles();
+      }
     }
 
-    //creating md5 hash of the file
-    if (status === "getting_upload_params") {
-      //New way to create chunks
-      let filePart = "";
-      let calls = [];
-      let fileSize = file.size;
+    // if (status === "preparing") {
+    //   let uniqueId = uuidv4();
+    //   meta.id = uniqueId;
+    // }
 
-      if (fileSize > 1000000) {
-        var chunkSize = 1000000;
-      } else {
-        var chunkSize = 100000;
-      }
+    // //creating md5 hash of the file
+    // if (status === "getting_upload_params") {
+    //   //New way to create chunks
+    //   let filePart = "";
+    //   let calls = [];
+    //   let fileSize = file.size;
 
-      let sentByte = 0;
-      let chunkNumber = 0;
-      while (sentByte < fileSize) {
-        if (fileSize - sentByte >= chunkSize) {
-          filePart = file.slice(sentByte, sentByte + chunkSize);
-          sentByte += chunkSize;
-        } else {
-          filePart = file.slice(sentByte, fileSize);
-          sentByte += fileSize - sentByte;
-        }
+    //   if (fileSize > 1000000) {
+    //     var chunkSize = 1000000;
+    //   } else {
+    //     var chunkSize = 100000;
+    //   }
 
-        chunkNumber++;
+    //   let sentByte = 0;
+    //   let chunkNumber = 0;
+    //   while (sentByte < fileSize) {
+    //     if (fileSize - sentByte >= chunkSize) {
+    //       filePart = file.slice(sentByte, sentByte + chunkSize);
+    //       sentByte += chunkSize;
+    //     } else {
+    //       filePart = file.slice(sentByte, fileSize);
+    //       sentByte += fileSize - sentByte;
+    //     }
 
-        calls.push(
-          this.uploadUsingAxios(filePart, chunkNumber, fileSize, meta)
-        );
-      }
+    //     chunkNumber++;
 
-      let that = this;
-      // Promise.all(calls)
-      //   .then(function(values) {
-      //     console.log(values);
-      //     // //concat the chunks
-      //     meta["totalChunks"] = chunkNumber;
-      //     let { data } = that.concatUsingAxios(meta);
-      //   })
-      //   .catch(err => {
-      //     console.error("-=-=-=-=-=" + err);
-      //   });
+    //     calls.push(
+    //       this.uploadUsingAxios(filePart, chunkNumber, fileSize, meta)
+    //     );
+    //   }
 
-      let data = await Promise.all(calls);
-      console.log(data);
+    //   let that = this;
+    //   // Promise.all(calls)
+    //   //   .then(function(values) {
+    //   //     console.log(values);
+    //   //     // //concat the chunks
+    //   //     meta["totalChunks"] = chunkNumber;
+    //   //     let { data } = that.concatUsingAxios(meta);
+    //   //   })
+    //   //   .catch(err => {
+    //   //     console.error("-=-=-=-=-=" + err);
+    //   //   });
 
-      // Computing failed responses
-      let failedRes = [];
-      let resRetry = [];
-      for (let j = 0; j <= data.length; j++) {
-        if (status !== 200) {
-          failedRes.push(calls[j]);
-        }
-        data = await Promise.all(failedRes);
-        failedRes = [];
-        if (data.length <= 0) {
-          j = 0;
-        }
-      }
+    //   let data = await Promise.all(calls);
+    //   console.log(data);
 
-      console.log("failed chunks");
-    }
-    if (status === "removed") {
-      this.removeFile(meta);
-    }
-    console.log("-=-=-=-=-=-=", status, meta);
+    //   // Computing failed responses
+    //   // let failedRes = [];
+    //   // let resRetry = [];
+    //   // let failed = false
+    //   // for (let j = 0; j <= data.length; j++) {
+    //   //   if (status !== 200) {
+    //   //     failedRes.push(calls[j]);
+    //   //   }
+    //   //   data = await Promise.all(failedRes);
+    //   //   failedRes = [];
+    //   //   if (data.length = 0) {
+    //   //     j = 0;
+    //   //   }
+    //   // }
+
+    //   console.log("failed chunks");
+    // }
+    // if (status === "removed") {
+    //   this.removeFile(meta);
+    // }
+    // console.log("-=-=-=-=-=-=", status, meta);
   };
 
   handleSubmit = (files, allFiles) => {
@@ -179,7 +236,6 @@ export default class FileUploader extends Component {
     return (
       <div>
         <Dropzone
-          getUploadParams={this.uploadUsingAxios}
           onChangeStatus={this.handleChangeStatus}
           onSubmit={this.handleSubmit}
           accept="image/*,video/*"
