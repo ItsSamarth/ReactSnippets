@@ -4,6 +4,7 @@ import Navbars from "./component/navbar/Navbars";
 import React, { Component } from "react";
 import FileUploader from "./views/FileUploader";
 import "react-dropzone-uploader/dist/styles.css";
+import TestUpload from "./views/TestUpload";
 
 export default class App extends Component {
   constructor(props) {
@@ -25,7 +26,8 @@ export default class App extends Component {
       <div>
         {/* {show && <Navbars />} */}
         {/* <Login toggleHide={this.toggleHide} /> */}
-        <FileUploader />
+        {/* <FileUploader /> */}
+        <TestUpload />
       </div>
     );
   }

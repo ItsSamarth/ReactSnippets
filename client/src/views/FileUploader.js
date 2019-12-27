@@ -1,8 +1,7 @@
 import React, { Component } from "react";
 import Dropzone from "react-dropzone-uploader";
 import AXIOS from "../utils/api";
-import uuidv4 from "uuid/v4";
-import md5 from "md5";
+import axios from "axios";
 
 export default class FileUploader extends Component {
   constructor(props) {
@@ -10,31 +9,99 @@ export default class FileUploader extends Component {
     this.state = {
       uploadingImages: {},
       dataUnsaved: true,
-      activeChunkQueue: [],
-      pendingChunkQueue: [],
-      failedChunkQueue: [],
-      pendingFileQueue: [],
-      activeFileQueue: [],
-      failedFileQueue: [],
-      uploadingStart: false
+      uploadingPercentage: {
+        filename: 0
+      }
     };
   }
 
-  getUploadParams = data => {
-    // console.log("Uploading file", file, meta);
-    // console.log("blob url", meta.previewUrl);
-    // let blob = meta.previewUrl;
-    // let base64data = "";
-    // var reader = new window.FileReader();
-    // reader.readAsDataURL(blob);
-    // reader.onloadend = function() {
-    //   base64data = reader.result;
-    //   console.log(base64data);
-    // };
-    // console.log("Image to blob ele", blob);
-    return { url: `http://localhost:8080/api/file/upload/${data.meta.id}` };
+  getPresignedUrl = meta => {
+    let options = {
+      url: "http://localhost:8080/api/s3/presigned",
+      method: "post",
+      data: meta
+    };
+    return AXIOS(options);
   };
 
+  uploadToAws = (signedUrl, file) => {
+    console.log("File type", file);
+    // let options = {
+    //   url: signedUrl,
+    //   method: 'post',
+    // }
+
+    let formData = new FormData();
+    formData.append("fileId", file);
+    let options = {
+      url: signedUrl,
+      method: "put",
+      data: formData,
+      headers: {
+        "Content-Type": file.type,
+        "X-Requested-With": "XMLHttpRequest"
+      },
+      onUploadProgress: progressEvent => {
+        let name = `'${file.name}'`;
+        let { uploadingPercentage } = this.state;
+        uploadingPercentage[name] = progressEvent.loaded;
+        this.setState({
+          uploadingPercentage
+        });
+
+        let newmeta = {
+          meta: {
+            status: "uploading",
+            progress: "40"
+          }
+        };
+        // this.handleChangeStatus(newmeta, "uploading");
+        console.log(progressEvent.loaded, this.state);
+      }
+    };
+
+    return AXIOS(options);
+    // return axios.put(signedUrl, file, options);
+  };
+
+  getUploadParams = async ({ meta, file }) => {
+    // console.log("Get uplod params", meta, file);
+
+    try {
+      let { data } = await this.getPresignedUrl(meta);
+      // console.log("Presigned url data", data);
+
+      // let ans = await this.uploadToAws(data, file);
+      // console.log("ans", ans);
+      // let data =
+      //   "https://tmtload.s3.ap-south-1.amazonaws.com/70825553_2492749750812323_3809205957951488000_n.jpg?Content-Type=image%2Fjpeg&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIASKFNFEOTC6LR5SEW%2F20191227%2Fap-south-1%2Fs3%2Faws4_request&X-Amz-Date=20191227T060403Z&X-Amz-Expires=900&X-Amz-Signature=444fb19dcb5f2e90ce398abc2732d67578c56576ecc8438d84685383fd267067&X-Amz-SignedHeaders=host";
+      // let options = {
+      //   url: data,
+      //   method: "put",
+      //   headers: {
+      //     "Content-Type": file.type
+      //   },
+      //   onUploadProgress: progressEvent => console.log(progressEvent.loaded)
+      // };
+      return { url: data, method: "put" };
+    } catch (err) {
+      console.error(err);
+    }
+    // const { fields, uploadUrl, fileUrl } = {
+    //   fields: {
+    //     AWSAccessKeyId: "AKIAI3V7H4N4QZBYTENQ",
+    //     acl: "public-read",
+    //     key: "files/test.txt",
+    //     policy:
+    //       "eyJleHBpcmF0aW9uIjogIjIwMTgtMTAtMzBUMjM6MTk6NDdaIiwgImNvbmRpdGlvbnMiOiBbeyJhY2wiOiAicHVibGljLXJlYWQifSwgWyJjb250ZW50LWxlbmd0aC1yYW5nZSIsIDEwLCAzMTQ1NzI4MF0sIHsiYnVja2V0IjogImJlYW10ZWNoLWZpbGUifSwgeyJrZXkiOiAiY29tcGFueS8zLzg5Nzg5NDg2LWQ5NGEtNDI1MS1hNDJkLTE4YWY3NTJhYjdkMi10ZXN0LnR4dCJ9XX0=",
+    //     signature: "L7r3KBtyOXjUKy31g42JTYb1sio="
+    //   },
+    //   fileUrl: "https://tmtload.s3.ap-south-1.amazonaws.com/files/test.txt",
+    //   uploadUrl: "https://tmtload.s3.ap-south-1.amazonaws.com/"
+    // };
+    // console.log(fields, fileUrl, uploadUrl);
+    // return { meta: meta.fileUrl, url: data };
+  };
   uploadUsingAxios = (fileChunk, chunkNumber, totalFileSize, meta) => {
     console.log("UPload using axios", fileChunk, chunkNumber, totalFileSize);
 
@@ -108,99 +175,8 @@ export default class FileUploader extends Component {
     }
   };
 
-  handleChangeStatus = async file => {
-    console.log(file);
-    console.log(file.meta.status);
-    if (file.meta.status === "preparing") {
-      let uniqueId = uuidv4();
-      file.meta.id = uniqueId;
-
-      //
-      let { pendingFileQueue, uploadingStart } = this.state;
-      pendingFileQueue.push(file);
-      this.setState({
-        pendingFileQueue
-      });
-
-      console.log("New state is", this.state);
-
-      if (uploadingStart) {
-        this.sendFiles();
-      }
-    }
-
-    // if (status === "preparing") {
-    //   let uniqueId = uuidv4();
-    //   meta.id = uniqueId;
-    // }
-
-    // //creating md5 hash of the file
-    // if (status === "getting_upload_params") {
-    //   //New way to create chunks
-    //   let filePart = "";
-    //   let calls = [];
-    //   let fileSize = file.size;
-
-    //   if (fileSize > 1000000) {
-    //     var chunkSize = 1000000;
-    //   } else {
-    //     var chunkSize = 100000;
-    //   }
-
-    //   let sentByte = 0;
-    //   let chunkNumber = 0;
-    //   while (sentByte < fileSize) {
-    //     if (fileSize - sentByte >= chunkSize) {
-    //       filePart = file.slice(sentByte, sentByte + chunkSize);
-    //       sentByte += chunkSize;
-    //     } else {
-    //       filePart = file.slice(sentByte, fileSize);
-    //       sentByte += fileSize - sentByte;
-    //     }
-
-    //     chunkNumber++;
-
-    //     calls.push(
-    //       this.uploadUsingAxios(filePart, chunkNumber, fileSize, meta)
-    //     );
-    //   }
-
-    //   let that = this;
-    //   // Promise.all(calls)
-    //   //   .then(function(values) {
-    //   //     console.log(values);
-    //   //     // //concat the chunks
-    //   //     meta["totalChunks"] = chunkNumber;
-    //   //     let { data } = that.concatUsingAxios(meta);
-    //   //   })
-    //   //   .catch(err => {
-    //   //     console.error("-=-=-=-=-=" + err);
-    //   //   });
-
-    //   let data = await Promise.all(calls);
-    //   console.log(data);
-
-    //   // Computing failed responses
-    //   // let failedRes = [];
-    //   // let resRetry = [];
-    //   // let failed = false
-    //   // for (let j = 0; j <= data.length; j++) {
-    //   //   if (status !== 200) {
-    //   //     failedRes.push(calls[j]);
-    //   //   }
-    //   //   data = await Promise.all(failedRes);
-    //   //   failedRes = [];
-    //   //   if (data.length = 0) {
-    //   //     j = 0;
-    //   //   }
-    //   // }
-
-    //   console.log("failed chunks");
-    // }
-    // if (status === "removed") {
-    //   this.removeFile(meta);
-    // }
-    // console.log("-=-=-=-=-=-=", status, meta);
+  handleChangeStatus = ({ meta }, status) => {
+    console.log(status, meta);
   };
 
   handleSubmit = (files, allFiles) => {
@@ -236,6 +212,7 @@ export default class FileUploader extends Component {
     return (
       <div>
         <Dropzone
+          getUploadParams={this.getUploadParams}
           onChangeStatus={this.handleChangeStatus}
           onSubmit={this.handleSubmit}
           accept="image/*,video/*"
