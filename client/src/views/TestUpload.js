@@ -11,6 +11,23 @@ export default class TestUpload extends Component {
       backendUrl: "http://localhost:8080/api/test"
     };
   }
+
+  uploadRemainingParts = () => {
+    console.log("Internet Connected");
+  };
+
+  componentDidMount = () => {
+    window.addEventListener("offline", () => console.log("No Internet"));
+    window.addEventListener("online", this.uploadRemainingParts.bind(this));
+  };
+
+  componentWillUnmount() {
+    window.removeEventListener("offline", () =>
+      console.log(" Removed No Internet")
+    );
+    window.removeEventListener("online", this.uploadRemainingParts.bind(this));
+  }
+
   async fileHandler(event) {
     try {
       let fileSelected = event.target.files[0];
@@ -41,10 +58,12 @@ export default class TestUpload extends Component {
     }
   }
 
+  async completeMultipart() {}
+
   async uploadMultipartFile() {
     try {
       console.log("Inside uploadMultipartFile");
-      const CHUNK_SIZE = 1000000; // 10MB
+      const CHUNK_SIZE = 5000000; // 10MB
       const fileSize = this.state.fileSelected.size;
       const CHUNKS_COUNT = Math.floor(fileSize / CHUNK_SIZE) + 1;
       let promisesArray = [];
@@ -101,18 +120,18 @@ export default class TestUpload extends Component {
       });
 
       //test
-      let listMultipart = await axios.post(
-        `${this.state.backendUrl}/listMultiPartUpload`,
-        {
-          params: {
-            fileName: this.state.fileName,
+      //   let listMultipart = await axios.post(
+      //     `${this.state.backendUrl}/listMultiPartUpload`,
+      //     {
+      //       params: {
+      //         fileName: this.state.fileName,
 
-            uploadId: this.state.uploadId
-          }
-        }
-      );
+      //         uploadId: this.state.uploadId
+      //       }
+      //     }
+      //   );
 
-      console.log("list multipart upload", listMultipart);
+      //   console.log("list multipart upload", listMultipart);
 
       // CompleteMultipartUpload in the backend server
       let completeUploadResp = await axios.post(
