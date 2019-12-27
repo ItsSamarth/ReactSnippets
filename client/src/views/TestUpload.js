@@ -58,7 +58,32 @@ export default class TestUpload extends Component {
     }
   }
 
-  async completeMultipart() {}
+  async completeMultipart(resolvedArray) {
+    let uploadPartsArray = [];
+    resolvedArray.forEach((resolvedPromise, index) => {
+      uploadPartsArray.push({
+        ETag: resolvedPromise.headers.etag,
+        PartNumber: index + 1
+      });
+    });
+
+    // CompleteMultipartUpload in the backend server
+    let completeUploadResp = await axios.post(
+      `${this.state.backendUrl}/complete-upload`,
+      {
+        params: {
+          fileName: this.state.fileName,
+          parts: uploadPartsArray,
+          uploadId: this.state.uploadId
+        }
+      }
+    );
+
+    return completeUploadResp;
+    // console.log(completeUploadResp.data, "complete upload response");
+  }
+
+  processFailedChunks = resolvedArray => {};
 
   async uploadMultipartFile() {
     try {
@@ -78,6 +103,7 @@ export default class TestUpload extends Component {
             : this.state.fileSelected.slice(start);
 
         // Get presigned URL for each part
+        var { fileName, uploadId } = this.state;
         let getUploadUrlResp = await axios.get(
           `${this.state.backendUrl}/get-upload-url`,
           {
@@ -111,41 +137,17 @@ export default class TestUpload extends Component {
       let resolvedArray = await Promise.all(promisesArray);
       console.log(resolvedArray, " resolvedAr");
 
-      let uploadPartsArray = [];
-      resolvedArray.forEach((resolvedPromise, index) => {
-        uploadPartsArray.push({
-          ETag: resolvedPromise.headers.etag,
-          PartNumber: index + 1
-        });
+      let failedChunk = { ...this.state.failedChunks };
+      failedChunk[uploadId] = resolvedArray;
+      await this.setState({
+        failedChunks: failedChunk
       });
 
-      //test
-      //   let listMultipart = await axios.post(
-      //     `${this.state.backendUrl}/listMultiPartUpload`,
-      //     {
-      //       params: {
-      //         fileName: this.state.fileName,
+      let newResponseArray = this.processFailedChunks();
 
-      //         uploadId: this.state.uploadId
-      //       }
-      //     }
-      //   );
+      let completeMultipartRes = this.completeMultipart(resolvedArray);
 
-      //   console.log("list multipart upload", listMultipart);
-
-      // CompleteMultipartUpload in the backend server
-      let completeUploadResp = await axios.post(
-        `${this.state.backendUrl}/complete-upload`,
-        {
-          params: {
-            fileName: this.state.fileName,
-            parts: uploadPartsArray,
-            uploadId: this.state.uploadId
-          }
-        }
-      );
-
-      console.log(completeUploadResp.data, "complete upload response");
+      console.log(completeMultipartRes, "complete upload response");
     } catch (err) {
       console.log(err);
     }

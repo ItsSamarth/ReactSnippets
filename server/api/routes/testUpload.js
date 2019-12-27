@@ -9,10 +9,9 @@ const BUCKET_NAME = "tmtload";
 // });
 
 const s3 = new AWS.S3({
-  accessKeyId: "AKIASKFNFEOTC6LR5SEW",
-  secretAccessKey: "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",
-  region: "ap-south-1",
-  signatureVersion: "v4"
+  accessKeyId: "",
+  secretAccessKey: "",
+  region: "ap-south-1"
 });
 
 router.get("/", (req, res) => {
