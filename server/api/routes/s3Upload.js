@@ -27,7 +27,7 @@ aws.config.update({
 
 router.post("/presigned", (req, res) => {
   var s3 = new aws.S3({ signatureVersion: "v4" });
-  console.log("Req. body", req.body);
+  // console.log("Req. body", req.body);
   //   return res.status(200).json({
   //     message: "ok",
   //     body: req.body
@@ -35,7 +35,7 @@ router.post("/presigned", (req, res) => {
   var params = {
     Bucket: "tmtload",
     Key: req.body.name,
-    Expires: 60,
+    Expires: 900,
     ContentType: req.body.type
   };
 

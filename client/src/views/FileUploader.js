@@ -69,10 +69,21 @@ export default class FileUploader extends Component {
 
     try {
       let { data } = await this.getPresignedUrl(meta);
-      console.log("Presigned url data", data);
+      // console.log("Presigned url data", data);
 
-      let ans = await this.uploadToAws(data, file);
-      console.log("ans", ans);
+      // let ans = await this.uploadToAws(data, file);
+      // console.log("ans", ans);
+      // let data =
+      //   "https://tmtload.s3.ap-south-1.amazonaws.com/70825553_2492749750812323_3809205957951488000_n.jpg?Content-Type=image%2Fjpeg&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIASKFNFEOTC6LR5SEW%2F20191227%2Fap-south-1%2Fs3%2Faws4_request&X-Amz-Date=20191227T060403Z&X-Amz-Expires=900&X-Amz-Signature=444fb19dcb5f2e90ce398abc2732d67578c56576ecc8438d84685383fd267067&X-Amz-SignedHeaders=host";
+      // let options = {
+      //   url: data,
+      //   method: "put",
+      //   headers: {
+      //     "Content-Type": file.type
+      //   },
+      //   onUploadProgress: progressEvent => console.log(progressEvent.loaded)
+      // };
+      return { url: data, method: "put" };
     } catch (err) {
       console.error(err);
     }

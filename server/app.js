@@ -17,6 +17,7 @@ const authenticationRoutes = require("./api/routes/authentication");
 const customerRoutes = require("./api/routes/customer");
 const fileUploadRoutes = require("./api/routes/fileupload");
 const s3UploadRoutes = require("./api/routes/s3Upload");
+const testUploadRoutes = require("./api/routes/testUpload");
 
 //MYSQL CONNECTION
 var connection = mysql.createPool({
@@ -63,6 +64,7 @@ app.use("/api/auth", authenticationRoutes);
 app.use("/api/customer", customerRoutes);
 app.use("/api/file", fileUploadRoutes);
 app.use("/api/s3", s3UploadRoutes);
+app.use("/api/test", testUploadRoutes);
 
 // app.use("/api/chunk/file", chunkFileUploadRoutes);
 
