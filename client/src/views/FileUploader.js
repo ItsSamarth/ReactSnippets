@@ -249,7 +249,6 @@ export default class FileUploader extends Component {
             inputLabel: (files, extra) => (extra.reject ? { color: "red" } : {})
           }}
         />
-        <p id="text"></p>
       </div>
     );
   }
