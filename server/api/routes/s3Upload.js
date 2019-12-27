@@ -3,8 +3,8 @@ const router = express.Router();
 var aws = require("aws-sdk");
 
 aws.config.update({
-  accessKeyId: "AKIASKFNFEOTC6LR5SEW",
-  secretAccessKey: "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",
+  accessKeyId: "",
+  secretAccessKey: "",
   region: "ap-south-1"
 });
 
