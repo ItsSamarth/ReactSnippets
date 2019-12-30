@@ -8,12 +8,56 @@ export default class TestUpload extends Component {
       fileSelected: null,
       uploadId: "",
       fileName: "",
-      backendUrl: "http://localhost:8080/api/test"
+      backendUrl: "http://localhost:8080/api/test",
+      failedChunks: []
     };
   }
 
-  uploadRemainingParts = () => {
-    console.log("Internet Connected");
+  uploadRemainingParts = async () => {
+    let { failedChunks } = this.state;
+    console.log("Internet Connected", failedChunks);
+    let totalFailedChunks = failedChunks.length;
+
+    //If there is no chunks to upload then return
+    if (totalFailedChunks === 0) {
+      console.log("No chunks to upload");
+      return;
+    }
+
+    let index = 0;
+    let promisesArray = [];
+    while (totalFailedChunks > index) {
+      let { url, data, headers } = failedChunks[index].reason.config;
+      // Send part aws server
+      let uploadResp = axios.put(url, data, {
+        headers
+      });
+      promisesArray.push(uploadResp);
+      index++;
+    }
+
+    let resolvedArray = await Promise.allSettled(promisesArray);
+
+    //extract failed request
+    let retryRequestArr = [];
+    for (let i = 0; i < resolvedArray.length; i++) {
+      if (resolvedArray[i].status === "rejected") {
+        console.log("Failed request is:", i, resolvedArray[i].reason.config);
+        retryRequestArr.push(resolvedArray[i]);
+      }
+    }
+
+    //if failed chunks
+    if (retryRequestArr.length > 0) {
+      let tempArr = [...retryRequestArr];
+      console.log("Temp array of failed request", tempArr);
+      await this.setState({
+        failedChunks: tempArr
+      });
+    } else {
+      let completeMultipartRes = this.completeMultipart(resolvedArray);
+      console.log(completeMultipartRes, "complete upload response");
+    }
   };
 
   componentDidMount = () => {
@@ -62,7 +106,7 @@ export default class TestUpload extends Component {
     let uploadPartsArray = [];
     resolvedArray.forEach((resolvedPromise, index) => {
       uploadPartsArray.push({
-        ETag: resolvedPromise.headers.etag,
+        ETag: resolvedPromise.value.headers.etag,
         PartNumber: index + 1
       });
     });
@@ -85,10 +129,15 @@ export default class TestUpload extends Component {
 
   processFailedChunks = resolvedArray => {};
 
+  //function to solve promise all reject problem
+  allSkippingErrors = promises => {
+    console.log("called with new reuqst", promises);
+    return Promise.all(promises.map(p => p.catch(error => null)));
+  };
+
   async uploadMultipartFile() {
     try {
-      console.log("Inside uploadMultipartFile");
-      const CHUNK_SIZE = 5000000; // 10MB
+      const CHUNK_SIZE = 5242880; // 10MB //5mb 5242880 5 << 20
       const fileSize = this.state.fileSelected.size;
       const CHUNKS_COUNT = Math.floor(fileSize / CHUNK_SIZE) + 1;
       let promisesArray = [];
@@ -134,16 +183,33 @@ export default class TestUpload extends Component {
         promisesArray.push(uploadResp);
       }
 
-      let resolvedArray = await Promise.all(promisesArray);
+      console.log("promises array", promisesArray);
+      let resolvedArray = await Promise.allSettled(promisesArray);
+      // let resolvedArray = await this.allSkippingErrors(promisesArray);
       console.log(resolvedArray, " resolvedAr");
 
-      let failedChunk = { ...this.state.failedChunks };
-      failedChunk[uploadId] = resolvedArray;
+      //extract failed request
+      let retryRequestArr = [];
+      for (let i = 0; i < resolvedArray.length; i++) {
+        if (resolvedArray[i].status === "rejected") {
+          console.log("Failed request is:", i, resolvedArray[i].reason.config);
+          retryRequestArr.push(resolvedArray[i]);
+        }
+      }
+
+      let { failedChunks } = this.state;
+      let tempArr = [...failedChunks, ...retryRequestArr];
+      console.log("Temp array of failed request", tempArr);
       await this.setState({
-        failedChunks: failedChunk
+        failedChunks: tempArr
       });
 
-      let newResponseArray = this.processFailedChunks();
+      //cause we have failed parts
+      if (retryRequestArr.length > 0) {
+        return;
+      }
+
+      // let newResponseArray = this.processFailedChunks();
 
       let completeMultipartRes = this.completeMultipart(resolvedArray);
 
@@ -162,6 +228,7 @@ export default class TestUpload extends Component {
             <input
               type="file"
               id="file"
+              accept=".jpeg,.png,.jpg,.mp4"
               onChange={this.fileHandler.bind(this)}
             />
             <button type="submit">Upload</button>
