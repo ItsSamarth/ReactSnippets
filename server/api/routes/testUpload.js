@@ -2,15 +2,10 @@ const express = require("express");
 const router = express.Router();
 var AWS = require("aws-sdk");
 const BUCKET_NAME = "tmtload";
-// aws.config.update({
-//   accessKeyId: "AKIASKFNFEOTC6LR5SEW",
-//   secretAccessKey: "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",
-//   region: "ap-south-1"
-// });
 
 const s3 = new AWS.S3({
-  accessKeyId: "AKIASKFNFEOTC6LR5SEW",
-  secretAccessKey: "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",
+  accessKeyId: "",
+  secretAccessKey: "",
   region: "ap-south-1"
 });
 
