@@ -32,6 +32,8 @@ export default class TestUpload extends Component {
       let uploadResp = axios.put(url, data, {
         headers
       });
+
+      console.log("Online function promise array", promisesArray);
       promisesArray.push(uploadResp);
       index++;
     }
@@ -56,6 +58,9 @@ export default class TestUpload extends Component {
       });
     } else {
       let completeMultipartRes = this.completeMultipart(resolvedArray);
+      await this.setState({
+        failedChunks: []
+      });
       console.log(completeMultipartRes, "complete upload response");
     }
   };
