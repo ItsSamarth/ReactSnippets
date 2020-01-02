@@ -5,6 +5,7 @@ import React, { Component } from "react";
 import FileUploader from "./views/FileUploader";
 import "react-dropzone-uploader/dist/styles.css";
 import TestUpload from "./views/TestUpload";
+import { BrowserRouter as Router, Switch, Route } from "react-router-dom";
 
 export default class App extends Component {
   constructor(props) {
@@ -27,7 +28,13 @@ export default class App extends Component {
         {/* {show && <Navbars />} */}
         {/* <Login toggleHide={this.toggleHide} /> */}
         {/* <FileUploader /> */}
-        <TestUpload />
+        {/* <TestUpload /> */}
+        <Router>
+          <Switch>
+            <Route path="/" exact component={FileUploader} />
+            <Route path="/test" component={TestUpload} />
+          </Switch>
+        </Router>
       </div>
     );
   }

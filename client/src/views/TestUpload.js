@@ -80,6 +80,8 @@ export default class TestUpload extends Component {
   async fileHandler(event) {
     try {
       let fileSelected = event.target.files[0];
+      console.log("Total file selected", event.target.files.length);
+      console.log("Total files", event.target.files);
       let fileName = fileSelected.name;
       this.setState({ fileSelected });
       this.setState({ fileName });
@@ -232,6 +234,7 @@ export default class TestUpload extends Component {
             <p>Upload Dataset:</p>
             <input
               type="file"
+              multiple
               id="file"
               accept=".jpeg,.png,.jpg,.mp4"
               onChange={this.fileHandler.bind(this)}
