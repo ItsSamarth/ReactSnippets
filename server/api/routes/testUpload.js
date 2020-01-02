@@ -6,7 +6,7 @@ const BUCKET_NAME = "tmtload";
 const s3 = new AWS.S3({
   accessKeyId: "",
   secretAccessKey: "",
-  region: "ap-south-1"
+  region: ""
 });
 
 router.get("/", (req, res) => {
